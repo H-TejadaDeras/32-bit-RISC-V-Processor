@@ -40,6 +40,12 @@ module top (
     logic [31:0] increment = 32'd1;
     logic [31:0] instruction_output;
 
+    // Variables for reading from a register and writing to register
+    logic [31:0] reg_address = 32'h00000002; // Stack Pointer
+    logic [31:0] reg_input = 32'h01010101;
+    logic        reg_operation = 1'b1;
+    logic [31:0] reg_output;
+    logic [31:0] tmp;
 
     // variables for signals
     logic led;
@@ -60,6 +66,19 @@ module top (
         .instruction               (instruction_output[31:0])
     );
 
+    registers u3 (
+        .clk                        (clk),
+        .reg_address                (reg_address[31:0]),
+        .reg_input                  (reg_input[31:0]),
+        .reg_operation              (reg_operation),
+        .reg_output                 (reg_output[31:0])
+    );
+
+    // Testing Code for Register Functions
+    always_ff @(posedge clk) begin
+        reg_input <= ~reg_input;
+        // reg_operation <= ~reg_operation;
+    end
 
     // brad's code for controlling LEDs we can delete it but its here for reference.
     always_ff @(negedge clk) begin
