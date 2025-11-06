@@ -36,8 +36,8 @@ module top (
     logic reset;
 
     // values for program counter
-    logic [1:0] instruction_completed;
-    logic [31:0] increment;
+    logic [1:0] instruction_completed = 1'b1;
+    logic [31:0] increment = 32'd1;
     logic [31:0] instruction_output;
 
 
@@ -51,10 +51,6 @@ module top (
     logic [3:0] state = INIT;
     logic [21:0] count = 22'd0;
 
-
-    always_ff @(negedge clk) begin
-        imem_address <= imem_address + 1;
-    end
 
     program_counter u1 (
         .clk                       (clk), 

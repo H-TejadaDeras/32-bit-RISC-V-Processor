@@ -14,9 +14,12 @@ module program_counter (
     output logic [31:0] instruction
 );
 
-    always_ff @(negedge clk) begin
+    always_ff @(posedge clk) begin
         if (instruction_completed) begin
             instruction <= imem_address + increment;
+        end
+        else begin
+            instruction <= imem_address;
         end
     end
 
