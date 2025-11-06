@@ -58,15 +58,16 @@ module top (
 
     program_counter u1 (
         .clk                       (clk), 
-        .instruction_completed     (instruction_completed),
-        .imem_address              (imem_address),
-        .increment                 (increment),
-        .instruction               (instruction)
+        .instruction_completed     (instruction_completed[1:0]),
+        .imem_address              (imem_address[31:0]),
+        .increment                 (increment[31:0]),
+        .instruction               (instruction_output[31:0])
     );
 
 
     // brad's code for controlling LEDs we can delete it but its here for reference.
     always_ff @(negedge clk) begin
+        imem_address <= instruction_output;
         case (state)
             INIT: begin
                 dmem_address <= 32'hFFFFFFFC;
