@@ -37,7 +37,7 @@ module top (
 
     // values for program counter
     logic [1:0] instruction_completed = 1'b1;
-    logic [31:0] increment = 32'd1;
+    logic [31:0] increment = 32'd4;
     logic [31:0] instruction_output;
 
     // Variables for reading from a register and writing to register
@@ -53,7 +53,20 @@ module top (
     logic green;
     logic blue;
 
-    
+    // variables for decoder
+    logic [6:0]  opcode;
+    logic [4:0]  rd;
+    logic [2:0]  funct3_out;
+    logic [4:0]  rs1;
+    logic [4:0]  rs2;
+    logic [6:0]  funct7;
+    logic [31:0] imm_i;
+    logic [31:0] imm_s;
+    logic [31:0] imm_b;
+    logic [31:0] imm_u;
+    logic [31:0] imm_j;
+    logic [4:0] index;
+
     logic [3:0] state = INIT;
     logic [21:0] count = 22'd0;
 
@@ -66,19 +79,36 @@ module top (
         .instruction               (instruction_output[31:0])
     );
 
-    registers u3 (
-        .clk                        (clk),
-        .reg_address                (reg_address[31:0]),
-        .reg_input                  (reg_input[31:0]),
-        .reg_operation              (reg_operation),
-        .reg_output                 (reg_output[31:0])
+    decoder u2 (
+        .clk                       (clk),
+        .instruction               (imem_data_out),
+        .opcode                    (opcode),
+        .rd                        (rd),
+        .funct3                    (funct3_out),
+        .rs1                       (rs1),
+        .rs2                       (rs2),
+        .funct7                    (funct7),
+        .imm_i                     (imm_i),
+        .imm_s                     (imm_s),
+        .imm_b                     (imm_b),
+        .imm_u                     (imm_u),
+        .imm_j                     (imm_j),
+        .index                     (index)
     );
 
+    // registers u3 (
+    //     .clk                        (clk),
+    //     .reg_address                (reg_address[31:0]),
+    //     .reg_input                  (reg_input[31:0]),
+    //     .reg_operation              (reg_operation),
+    //     .reg_output                 (reg_output[31:0])
+    // );
+
     // Testing Code for Register Functions
-    always_ff @(posedge clk) begin
-        reg_input <= ~reg_input;
-        // reg_operation <= ~reg_operation;
-    end
+    // always_ff @(posedge clk) begin
+    //     reg_input <= ~reg_input;
+    //     // reg_operation <= ~reg_operation;
+    // end
 
     // brad's code for controlling LEDs we can delete it but its here for reference.
     always_ff @(negedge clk) begin
@@ -156,7 +186,7 @@ module top (
 
     memory #(
         .IMEM_INIT_FILE_PREFIX  ("example/rv32i_test")
-    ) u2 (
+    ) u3 (
         .clk            (clk), 
         .funct3         (funct3), 
         .dmem_wren      (dmem_wren), 
