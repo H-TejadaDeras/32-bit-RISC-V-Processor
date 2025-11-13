@@ -52,7 +52,7 @@ module top (
 
     memory #(
         .IMEM_INIT_FILE_PREFIX  ("example/rv32i_test")
-    ) u2 (
+    ) u3 (
         .clk            (clk), 
         .funct3         (w_funct3), 
         .dmem_wren      (w_dmem_wren), 
