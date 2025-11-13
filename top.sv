@@ -15,10 +15,10 @@ module top (
     output logic RGB_B
 );
     // Variable Declarations
-    localparam FETCH_INSTRUCTION = 2'b00;
-    localparam FETCH_REGISTERS = 2'b01;
-    localparam EXECUTE_INSTRUCTION = 2'b10;
-    localparam WRITE_BACK = 2'b11;
+    localparam FETCH_INSTRUCTION = 3'b000;
+    localparam FETCH_REGISTERS = 3'b001;
+    localparam EXECUTE_INSTRUCTION = 3'b010;
+    localparam WRITE_BACK = 3'b011;
 
     localparam HIGH = 1'b1;
     localparam LOW = 1'b0;
@@ -29,7 +29,7 @@ module top (
     logic red;
     logic green;
     logic blue;
-    logic processor_state = FETCH_INSTRUCTION;
+    logic [2:0] processor_state = FETCH_INSTRUCTION;
     logic w_funct3;
     logic w_dmem_wren;
     logic [31:0] w_dmem_address;
@@ -37,6 +37,9 @@ module top (
     logic [31:0] w_imem_address;
     logic [31:0] w_imem_data_out;
     logic [31:0] w_dmem_data_out;
+
+    // Register Declarations
+    logic [31:0] current_instruction; // Current instruction being executed by processor
 
     // Module Declarations
     program_counter u1 (
@@ -66,7 +69,7 @@ module top (
     );
 
     decoder u3 (
-        .instruction    (instruction_output[31:0]),
+        .instruction    (current_instruction[31:0]),
         .opcode         (opcode)
         .rd             (decoder_rd),
         .funct3         (funct3),
@@ -86,7 +89,8 @@ module top (
             FETCH_INSTRUCTION: begin
                 w_dmem_wren = LOW;
                 w_funct3 = 3'b010;
-                w_imem_address = instruction_output[31:0];
+                w_imem_address = instruction_output[31:0]; // Get instr. address from pc
+                current_instruction = w_imem_data_out; // Save current instruction for use by decoder
             end
 
             FETCH_REGISTERS: begin
@@ -102,33 +106,26 @@ module top (
         endcase
     end
 
-    always_ff @(posedge clk) begin
-        if (instruction_completed == HIGH) begin
-            processor_state <= DECODE_INSTRUCTION;
-        end
-    end
-
     /////////////////////// Data Memory Operations ////////////////////////////
     always_ff @(posedge clk) begin
         if (processor_state == EXECUTE_INSTRUCTION) begin
             case (opcode)
                 default: begin
-                    w_dmem_wren = LOW;
-                    w_funct3 = 3'b0;
-                    w_dmem_address = 32'b0;
+                    w_dmem_wren <= LOW;
+                    w_funct3 <= 3'b0;
+                    w_dmem_address <= 32'b0;
                 end
 
                 7'b0000011: begin // lb, lh, lw, lbu, lhu
-                    w_dmem_wren = LOW; // Read Operation
-                    w_funct3 = funct3;
-                    w_dmem_address = registers[rs1] + imm_i;
-                    registers[rd] = w_dmem_data_out;
+                    w_dmem_wren <= LOW; // Read Operation
+                    w_funct3 <= funct3;
+                    w_dmem_address <= registers[rs1] + imm_i;
+                    registers[rd] <= w_dmem_data_out;
                 end
 
                 7'b0100011: begin // sb, sh, sw
-                    w_dmem_wren = HIGH; // Write Operation
-                    w_funct3 = funct3;
-                    // w_dmem_address = registers[]
+                    w_dmem_wren <= HIGH; // Write Operation
+                    w_funct3 <= funct3;
                 end
             endcase
         end
@@ -142,8 +139,17 @@ module top (
         registers[0] = 32'b0;
     end
 
-    ///////////////////////////////////////////////////////////////////////////
+    ////////////////////////////// Update PC //////////////////////////////////
+    always_ff @(posedge clk) begin
+        if (opcode == 1101111) begin // jal
+        end else if (opcode == 1100111) begin // jalr
+        end else if (opcode == 1100011) begin // beq, bne, blt, bge, bltu, bgeu
+        end else begin // All other instructions
+            increment <= 32'd4;
+        end
+    end
 
+    ///////////////////////////////////////////////////////////////////////////
     assign LED = ~led;
     assign RGB_R = ~red;
     assign RGB_G = ~green;
