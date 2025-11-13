@@ -70,7 +70,7 @@ module top (
 
     decoder u3 (
         .instruction    (current_instruction[31:0]),
-        .opcode         (opcode)
+        .opcode         (opcode),
         .rd             (decoder_rd),
         .funct3         (funct3),
         .rs1            (rs1),
