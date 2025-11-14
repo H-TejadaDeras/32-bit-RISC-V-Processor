@@ -3,8 +3,6 @@
  */
 
 `include "memory.sv"
-`include "pc.sv"
-`include "registers.sv"
 `include "decoder.sv"
 
 module top (
@@ -14,6 +12,7 @@ module top (
     output logic RGB_G, 
     output logic RGB_B
 );
+    /////////////////////////////// Declarations //////////////////////////////
     // Variable Declarations
     localparam FETCH_INSTRUCTION = 3'b000;
     localparam FETCH_REGISTERS = 3'b001;
@@ -29,8 +28,11 @@ module top (
     logic red;
     logic green;
     logic blue;
-    logic [2:0] processor_state = FETCH_INSTRUCTION;
-    logic w_funct3;
+
+    logic instruction_completed = 1;
+    logic [31:0] increment = 32'b0;
+
+    logic [2:0] w_funct3_memory;
     logic w_dmem_wren;
     logic [31:0] w_dmem_address;
     logic [31:0] w_dmem_data_in;
@@ -38,23 +40,39 @@ module top (
     logic [31:0] w_imem_data_out;
     logic [31:0] w_dmem_data_out;
 
+    logic [6:0] opcode;
+    logic [4:0] rd;
+    logic [2:0] w_funct3_decoder;
+    logic [4:0] rs1;
+    logic [4:0] rs2;
+    logic [6:0] w_funct7_decoder;
+    logic [31:0] w_imm_i_decoder;
+    logic [31:0] w_imm_s_decoder;
+    logic [31:0] w_imm_b_decoder;
+    logic [31:0] w_imm_u_decoder;
+    logic [31:0] w_imm_j_decoder;
+
+    logic [2:0] processor_state = FETCH_INSTRUCTION;
+
     // Register Declarations
+    logic [31:0][31:0] registers = 0;
+    logic [31:0] pc = 0;
     logic [31:0] current_instruction; // Current instruction being executed by processor
 
     // Module Declarations
-    program_counter u1 (
-        .clk                       (clk), 
-        .instruction_completed     (instruction_completed),
-        .imem_address              (imem_address[31:0]),
-        .increment                 (increment[31:0]),
-        .instruction               (instruction_output[31:0])
-    );
+    // program_counter u1 (
+    //     .clk                       (clk), 
+    //     .instruction_completed     (instruction_completed),
+    //     .imem_address              (imem_address[31:0]),
+    //     .increment                 (increment[31:0]),
+    //     .instruction               (instruction_address[31:0])
+    // );
 
     memory #(
         .IMEM_INIT_FILE_PREFIX  ("example/rv32i_test")
-    ) u3 (
+    ) u2 (
         .clk            (clk), 
-        .funct3         (w_funct3), 
+        .funct3         (w_funct3_memory), 
         .dmem_wren      (w_dmem_wren), 
         .dmem_address   (w_dmem_address[31:0]), 
         .dmem_data_in   (w_dmem_data_in[31:0]), 
@@ -71,25 +89,25 @@ module top (
     decoder u3 (
         .instruction    (current_instruction[31:0]),
         .opcode         (opcode),
-        .rd             (decoder_rd),
-        .funct3         (funct3),
+        .rd             (rd),
+        .funct3         (w_funct3_decoder),
         .rs1            (rs1),
         .rs2            (rs2),
-        .funct7         (funct7),
-        .imm_i          (imm_i),
-        .imm_s          (imm_s),
-        .imm_b          (imm_b),
-        .imm_u          (imm_u),
-        .imm_j          (imm_j)
+        .funct7         (w_funct7_decoder),
+        .imm_i          (w_imm_i_decoder),
+        .imm_s          (w_imm_s_decoder),
+        .imm_b          (w_imm_b_decoder),
+        .imm_u          (w_imm_u_decoder),
+        .imm_j          (w_imm_j_decoder)
     );
 
-    // Processor State Machine
+    /////////////////////////// Processor State Machine ///////////////////////
     always_comb begin
         case (processor_state)
             FETCH_INSTRUCTION: begin
                 w_dmem_wren = LOW;
-                w_funct3 = 3'b010;
-                w_imem_address = instruction_output[31:0]; // Get instr. address from pc
+                w_funct3_memory = 3'b010;
+                w_imem_address = pc[31:0]; // Get instr. address from pc
                 current_instruction = w_imem_data_out; // Save current instruction for use by decoder
             end
 
@@ -112,34 +130,42 @@ module top (
             case (opcode)
                 default: begin
                     w_dmem_wren <= LOW;
-                    w_funct3 <= 3'b0;
+                    w_funct3_memory <= 3'b0;
                     w_dmem_address <= 32'b0;
                 end
 
                 7'b0000011: begin // lb, lh, lw, lbu, lhu
                     w_dmem_wren <= LOW; // Read Operation
-                    w_funct3 <= funct3;
-                    w_dmem_address <= registers[rs1] + imm_i;
+                    w_funct3_memory <= w_funct3_decoder;
+                    w_dmem_address <= registers[rs1] + w_imm_i_decoder;
                     registers[rd] <= w_dmem_data_out;
                 end
 
                 7'b0100011: begin // sb, sh, sw
                     w_dmem_wren <= HIGH; // Write Operation
-                    w_funct3 <= funct3;
+                    w_funct3_memory <= w_funct3_decoder;
                 end
             endcase
         end
     end
 
     ////////////////////////////// Registers //////////////////////////////////
-    logic [31:0][31:0] registers = 0;
-
     // Maintain Zero Register Equal to Zero
-    always_comb begin
+    always_ff @(posedge clk) begin
         registers[0] = 32'b0;
     end
 
-    ////////////////////////////// Update PC //////////////////////////////////
+    /////////////////////////// Program Counter ///////////////////////////////
+    always_ff @(posedge clk) begin
+        if (instruction_completed) begin
+            pc <= pc + increment;
+        end
+        else begin
+            pc <= pc;
+        end
+    end
+
+    // Update Program Counter
     always_ff @(posedge clk) begin
         if (opcode == 1101111) begin // jal
         end else if (opcode == 1100111) begin // jalr
