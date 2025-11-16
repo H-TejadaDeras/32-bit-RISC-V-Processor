@@ -54,24 +54,20 @@ module top (
 
     logic [2:0] processor_state = FETCH_INSTRUCTION;
 
+    // tmp
+    parameter EXECUTE_INSTRUCTION_CLK_CYCLES = 2 - 1; // Zero-based indexing
+    logic [$clog2(EXECUTE_INSTRUCTION_CLK_CYCLES):0] execute_instruction_counter = 0;
+
     // Register Declarations
     logic [31:0][31:0] registers = 0;
     logic [31:0] pc = 32'h1000; // Instruction memory as implemented in memory.sv starts at 0x1000
     logic [31:0] current_instruction; // Current instruction being executed by processor
 
     // Module Declarations
-    // program_counter u1 (
-    //     .clk                       (clk), 
-    //     .instruction_completed     (instruction_completed),
-    //     .imem_address              (imem_address[31:0]),
-    //     .increment                 (increment[31:0]),
-    //     .instruction               (instruction_address[31:0])
-    // );
-
     memory #(
         .IMEM_INIT_FILE_PREFIX  ("mem_test_"),
         .DMEM_INIT_FILE_PREFIX  ("example/rv32i_test")
-    ) u2 (
+    ) u1 (
         .clk            (clk), 
         .funct3         (w_funct3_memory), 
         .dmem_wren      (w_dmem_wren), 
@@ -87,7 +83,7 @@ module top (
         .blue           (blue)
     );
 
-    decoder u3 (
+    decoder u2 (
         .clk            (clk),
         .instruction    (current_instruction[31:0]),
         .opcode         (opcode),
@@ -110,12 +106,13 @@ module top (
                 w_dmem_wren = LOW;
                 w_funct3_memory = 3'b010;
                 w_imem_address = pc[31:0]; // Get instr. address from pc
-                current_instruction = w_imem_data_out; // Save current instruction for use by decoder
                 instruction_completed = LOW;
             end
 
-            // FETCH_REGISTERS: begin
-            // end
+            FETCH_REGISTERS: begin
+                current_instruction = w_imem_data_out; // Save current instruction for use by decoder
+                instruction_completed = LOW;
+            end
 
             EXECUTE_INSTRUCTION: begin
                 instruction_completed = LOW;
@@ -132,14 +129,20 @@ module top (
     always_ff @(posedge clk) begin
         case (processor_state)
             FETCH_INSTRUCTION: begin
+                processor_state <= FETCH_REGISTERS;
+            end
+
+            FETCH_REGISTERS: begin
                 processor_state <= EXECUTE_INSTRUCTION;
             end
 
-            // FETCH_REGISTERS: begin
-            // end
-
             EXECUTE_INSTRUCTION: begin
-                processor_state <= WRITE_BACK;
+                if (execute_instruction_counter >= EXECUTE_INSTRUCTION_CLK_CYCLES) begin
+                    processor_state <= WRITE_BACK;
+                    execute_instruction_counter = 0;
+                end else begin
+                    execute_instruction_counter = execute_instruction_counter + 1;
+                end
             end
 
             WRITE_BACK: begin
@@ -149,7 +152,7 @@ module top (
     end
 
     /////////////////////// Data Memory Operations ////////////////////////////
-    always_ff @(posedge clk) begin
+    always_ff @(negedge clk) begin
         if (processor_state == EXECUTE_INSTRUCTION) begin
             case (opcode)
                 default: begin
@@ -192,7 +195,7 @@ module top (
     end
 
     // Update Program Counter
-    always_ff @(posedge clk) begin
+    always_ff @(negedge clk) begin
         if (processor_state == WRITE_BACK) begin
             if (opcode == 1101111) begin // jal
             end else if (opcode == 1100111) begin // jalr

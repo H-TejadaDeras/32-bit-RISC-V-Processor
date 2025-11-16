@@ -6,7 +6,7 @@
 `include "top.sv"
 
 module test_bench_top;
-    logic clk = 0;
+    logic clk = 1;
     logic LED;
     logic RGB_R;
     logic RGB_G;
