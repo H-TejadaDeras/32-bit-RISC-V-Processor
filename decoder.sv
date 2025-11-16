@@ -130,4 +130,3 @@ module decoder (
         endcase
     end
 endmodule
-

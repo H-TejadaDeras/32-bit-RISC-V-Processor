@@ -8,7 +8,7 @@
 
 module program_counter (
     input logic clk, 
-    input logic [1:0] instruction_completed,
+    input logic instruction_completed,
     input logic [31:0] imem_address,
     input logic [31:0] increment,
     output logic [31:0] instruction

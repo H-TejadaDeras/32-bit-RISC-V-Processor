@@ -3,8 +3,6 @@
  */
 
 `include "memory.sv"
-`include "pc.sv"
-`include "registers.sv"
 `include "decoder.sv"
 
 module top (
@@ -14,187 +12,70 @@ module top (
     output logic RGB_G, 
     output logic RGB_B
 );
-   // variables for controlling LED
-    localparam [3:0] INIT       = 4'd0;
-    localparam [3:0] RED        = 4'd1;
-    localparam [3:0] YELLOW     = 4'd2;
-    localparam [3:0] GREEN      = 4'd3;
-    localparam [3:0] CYAN       = 4'd4;
-    localparam [3:0] BLUE       = 4'd5;
-    localparam [3:0] MAGENTA    = 4'd6;
-    localparam [21:0] STATE_DWELL_CYCLES = 22'd3000000;
+    /////////////////////////////// Declarations //////////////////////////////
+    // Variable Declarations
+    localparam FETCH_INSTRUCTION = 3'b000;
+    localparam FETCH_REGISTERS = 3'b001;
+    localparam EXECUTE_INSTRUCTION = 3'b010;
+    localparam WRITE_BACK = 3'b011;
 
+    localparam HIGH = 1'b1;
+    localparam LOW = 1'b0;
 
-    // values for storing/retriving memory
-    logic [2:0] funct3 = 3'b010;
-    logic dmem_wren = 1'b0;
-    logic [31:0] dmem_address = 31'd0;
-    logic [31:0] dmem_data_in = 31'd0;
-    logic [31:0] dmem_data_out;
-    logic [31:0] imem_address = 31'h1000;
-    logic [31:0] imem_data_out;
+    // Net Declarations
     logic reset;
-
-    // values for program counter
-    logic [1:0] instruction_completed = 1'b1;
-    logic [31:0] increment = 32'd4;
-    logic [31:0] instruction_output;
-
-    // Variables for reading from a register and writing to register
-    logic [31:0] reg_address = 32'h00000002; // Stack Pointer
-    logic [31:0] reg_input = 32'h01010101;
-    logic        reg_operation = 1'b1;
-    logic [31:0] reg_output;
-    logic [31:0] tmp;
-
-    // variables for signals
     logic led;
     logic red;
     logic green;
     logic blue;
 
-    // variables for decoder
-    logic [6:0]  opcode;
-    logic [4:0]  rd;
-    logic [2:0]  funct3_out;
-    logic [4:0]  rs1;
-    logic [4:0]  rs2;
-    logic [6:0]  funct7;
-    logic [31:0] imm_i;
-    logic [31:0] imm_s;
-    logic [31:0] imm_b;
-    logic [31:0] imm_u;
-    logic [31:0] imm_j;
-    logic [4:0] index;
+    logic instruction_completed;
+    logic [31:0] increment = 32'b0;
 
-    logic [3:0] state = INIT;
-    logic [21:0] count = 22'd0;
+    logic [2:0] w_funct3_memory;
+    logic w_dmem_wren;
+    logic [31:0] w_dmem_address;
+    logic [31:0] w_dmem_data_in;
+    logic [31:0] w_imem_address;
+    logic [31:0] w_imem_data_out;
+    logic [31:0] w_dmem_data_out;
 
+    logic [6:0] opcode;
+    logic [4:0] rd;
+    logic [2:0] w_funct3_decoder;
+    logic [4:0] rs1;
+    logic [4:0] rs2;
+    logic [6:0] w_funct7_decoder;
+    logic [31:0] w_imm_i_decoder;
+    logic [31:0] w_imm_s_decoder;
+    logic [31:0] w_imm_b_decoder;
+    logic [31:0] w_imm_u_decoder;
+    logic [31:0] w_imm_j_decoder;
 
-    program_counter u1 (
-        .clk                       (clk), 
-        .instruction_completed     (instruction_completed[1:0]),
-        .imem_address              (imem_address[31:0]),
-        .increment                 (increment[31:0]),
-        .instruction               (instruction_output[31:0])
-    );
+    logic [2:0] processor_state = FETCH_INSTRUCTION;
 
-    decoder u2 (
-        .clk                       (clk),
-        .instruction               (imem_data_out),
-        .opcode                    (opcode),
-        .rd                        (rd),
-        .funct3                    (funct3_out),
-        .rs1                       (rs1),
-        .rs2                       (rs2),
-        .funct7                    (funct7),
-        .imm_i                     (imm_i),
-        .imm_s                     (imm_s),
-        .imm_b                     (imm_b),
-        .imm_u                     (imm_u),
-        .imm_j                     (imm_j),
-        .index                     (index)
-    );
+    // tmp
+    parameter EXECUTE_INSTRUCTION_CLK_CYCLES = 2 - 1; // Zero-based indexing
+    logic [$clog2(EXECUTE_INSTRUCTION_CLK_CYCLES):0] execute_instruction_counter = 0;
 
-    // registers u3 (
-    //     .clk                        (clk),
-    //     .reg_address                (reg_address[31:0]),
-    //     .reg_input                  (reg_input[31:0]),
-    //     .reg_operation              (reg_operation),
-    //     .reg_output                 (reg_output[31:0])
-    // );
+    // Register Declarations
+    logic [31:0][31:0] registers = 0;
+    logic [31:0] pc = 32'h1000; // Instruction memory as implemented in memory.sv starts at 0x1000
+    logic [31:0] current_instruction; // Current instruction being executed by processor
 
-    // Testing Code for Register Functions
-    // always_ff @(posedge clk) begin
-    //     reg_input <= ~reg_input;
-    //     // reg_operation <= ~reg_operation;
-    // end
-
-    // brad's code for controlling LEDs we can delete it but its here for reference.
-    always_ff @(negedge clk) begin
-        imem_address <= instruction_output;
-        case (state)
-            INIT: begin
-                dmem_address <= 32'hFFFFFFFC;
-                dmem_data_in <= 32'hFFFF0000;
-                dmem_wren <= 1'b1;
-                count <= STATE_DWELL_CYCLES;
-                state <= RED;
-            end
-            RED: begin
-                if (count > 22'd0) begin
-                    count <= count - 1;
-                end
-                else begin
-                    dmem_data_in <= 32'hFFFFFF00;
-                    count <= STATE_DWELL_CYCLES;
-                    state <= YELLOW;
-                end
-            end
-            YELLOW: begin
-                if (count > 22'd0) begin
-                    count <= count - 1;
-                end
-                else begin
-                    dmem_data_in <= 32'hFF00FF00;
-                    count <= STATE_DWELL_CYCLES;
-                    state <= GREEN;
-                end
-            end
-            GREEN: begin
-                if (count > 22'd0) begin
-                    count <= count - 1;
-                end
-                else begin
-                    dmem_data_in <= 32'h0000FFFF;
-                    count <= STATE_DWELL_CYCLES;
-                    state <= CYAN;
-                end
-            end
-            CYAN: begin
-                if (count > 22'd0) begin
-                    count <= count - 1;
-                end
-                else begin
-                    dmem_data_in <= 32'h000000FF;
-                    count <= STATE_DWELL_CYCLES;
-                    state <= BLUE;
-                end
-            end
-            BLUE: begin
-                if (count > 22'd0) begin
-                    count <= count - 1;
-                end
-                else begin
-                    dmem_data_in <= 32'h00FF00FF;
-                    count <= STATE_DWELL_CYCLES;
-                    state <= MAGENTA;
-                end
-            end
-            MAGENTA: begin
-                if (count > 22'd0) begin
-                    count <= count - 1;
-                end
-                else begin
-                    dmem_data_in <= 32'hFFFF0000;
-                    count <= STATE_DWELL_CYCLES;
-                    state <= RED;
-                end
-            end
-        endcase
-    end
-
+    // Module Declarations
     memory #(
-        .IMEM_INIT_FILE_PREFIX  ("example/rv32i_test")
-    ) u3 (
+        .IMEM_INIT_FILE_PREFIX  ("mem_test_"),
+        .DMEM_INIT_FILE_PREFIX  ("example/rv32i_test")
+    ) u1 (
         .clk            (clk), 
-        .funct3         (funct3), 
-        .dmem_wren      (dmem_wren), 
-        .dmem_address   (dmem_address), 
-        .dmem_data_in   (dmem_data_in), 
-        .imem_address   (imem_address), 
-        .imem_data_out  (imem_data_out), 
-        .dmem_data_out  (dmem_data_out), 
+        .funct3         (w_funct3_memory), 
+        .dmem_wren      (w_dmem_wren), 
+        .dmem_address   (w_dmem_address[31:0]), 
+        .dmem_data_in   (w_dmem_data_in[31:0]), 
+        .imem_address   (w_imem_address[31:0]), 
+        .imem_data_out  (w_imem_data_out[31:0]), 
+        .dmem_data_out  (w_dmem_data_out[31:0]), 
         .reset          (reset), 
         .led            (led), 
         .red            (red), 
@@ -202,9 +83,132 @@ module top (
         .blue           (blue)
     );
 
+    decoder u2 (
+        .clk            (clk),
+        .instruction    (current_instruction[31:0]),
+        .opcode         (opcode),
+        .rd             (rd),
+        .funct3         (w_funct3_decoder),
+        .rs1            (rs1),
+        .rs2            (rs2),
+        .funct7         (w_funct7_decoder),
+        .imm_i          (w_imm_i_decoder),
+        .imm_s          (w_imm_s_decoder),
+        .imm_b          (w_imm_b_decoder),
+        .imm_u          (w_imm_u_decoder),
+        .imm_j          (w_imm_j_decoder)
+    );
+
+    /////////////////////////// Processor State Machine ///////////////////////
+    always_comb begin
+        case (processor_state)
+            FETCH_INSTRUCTION: begin
+                w_dmem_wren = LOW;
+                w_funct3_memory = 3'b010;
+                w_imem_address = pc[31:0]; // Get instr. address from pc
+                instruction_completed = LOW;
+            end
+
+            FETCH_REGISTERS: begin
+                current_instruction = w_imem_data_out; // Save current instruction for use by decoder
+                instruction_completed = LOW;
+            end
+
+            EXECUTE_INSTRUCTION: begin
+                instruction_completed = LOW;
+            end
+
+            WRITE_BACK: begin
+                // Update pc
+                // Store Word
+                instruction_completed = HIGH;
+            end
+        endcase
+    end
+
+    always_ff @(posedge clk) begin
+        case (processor_state)
+            FETCH_INSTRUCTION: begin
+                processor_state <= FETCH_REGISTERS;
+            end
+
+            FETCH_REGISTERS: begin
+                processor_state <= EXECUTE_INSTRUCTION;
+            end
+
+            EXECUTE_INSTRUCTION: begin
+                if (execute_instruction_counter >= EXECUTE_INSTRUCTION_CLK_CYCLES) begin
+                    processor_state <= WRITE_BACK;
+                    execute_instruction_counter = 0;
+                end else begin
+                    execute_instruction_counter = execute_instruction_counter + 1;
+                end
+            end
+
+            WRITE_BACK: begin
+                processor_state <= FETCH_INSTRUCTION;
+            end
+        endcase
+    end
+
+    /////////////////////// Data Memory Operations ////////////////////////////
+    always_ff @(negedge clk) begin
+        if (processor_state == EXECUTE_INSTRUCTION) begin
+            case (opcode)
+                default: begin
+                    w_dmem_wren <= LOW;
+                    w_funct3_memory <= 3'b0;
+                    w_dmem_address <= 32'b0;
+                end
+
+                7'b0000011: begin // lb, lh, lw, lbu, lhu
+                    w_dmem_wren <= LOW; // Read Operation
+                    w_funct3_memory <= w_funct3_decoder;
+                    w_dmem_address <= registers[rs1] + w_imm_i_decoder;
+                    registers[rd] <= w_dmem_data_out;
+                end
+
+                7'b0100011: begin // sb, sh, sw
+                    w_dmem_wren <= HIGH; // Write Operation
+                    w_funct3_memory <= w_funct3_decoder;
+                    w_dmem_address <= registers[rs1] + w_imm_s_decoder;
+                    w_dmem_data_in <= registers[rs2];
+                end
+            endcase
+        end
+    end
+
+    ////////////////////////////// Registers //////////////////////////////////
+    // Maintain Zero Register Equal to Zero
+    always_ff @(posedge clk) begin
+        registers[0] = 32'b0;
+    end
+
+    /////////////////////////// Program Counter ///////////////////////////////
+    always_ff @(posedge clk) begin
+        if (instruction_completed) begin
+            pc <= pc + increment;
+        end
+        else begin
+            pc <= pc;
+        end
+    end
+
+    // Update Program Counter
+    always_ff @(negedge clk) begin
+        if (processor_state == WRITE_BACK) begin
+            if (opcode == 1101111) begin // jal
+            end else if (opcode == 1100111) begin // jalr
+            end else if (opcode == 1100011) begin // beq, bne, blt, bge, bltu, bgeu
+            end else begin // All other instructions
+                increment <= 32'd4;
+            end
+        end
+    end
+
+    ///////////////////////////////////////////////////////////////////////////
     assign LED = ~led;
     assign RGB_R = ~red;
     assign RGB_G = ~green;
     assign RGB_B = ~blue;
-
 endmodule
