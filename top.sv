@@ -29,7 +29,7 @@ module top (
     logic green;
     logic blue;
 
-    logic instruction_completed = 1;
+    logic instruction_completed;
     logic [31:0] increment = 32'b0;
 
     logic [2:0] w_funct3_memory;
@@ -56,7 +56,7 @@ module top (
 
     // Register Declarations
     logic [31:0][31:0] registers = 0;
-    logic [31:0] pc = 0;
+    logic [31:0] pc = 32'h1000; // Instruction memory as implemented in memory.sv starts at 0x1000
     logic [31:0] current_instruction; // Current instruction being executed by processor
 
     // Module Declarations
@@ -69,7 +69,8 @@ module top (
     // );
 
     memory #(
-        .IMEM_INIT_FILE_PREFIX  ("example/rv32i_test")
+        .IMEM_INIT_FILE_PREFIX  ("mem_test_"),
+        .DMEM_INIT_FILE_PREFIX  ("example/rv32i_test")
     ) u2 (
         .clk            (clk), 
         .funct3         (w_funct3_memory), 
@@ -87,6 +88,7 @@ module top (
     );
 
     decoder u3 (
+        .clk            (clk),
         .instruction    (current_instruction[31:0]),
         .opcode         (opcode),
         .rd             (rd),
@@ -109,17 +111,39 @@ module top (
                 w_funct3_memory = 3'b010;
                 w_imem_address = pc[31:0]; // Get instr. address from pc
                 current_instruction = w_imem_data_out; // Save current instruction for use by decoder
+                instruction_completed = LOW;
             end
 
-            FETCH_REGISTERS: begin
-            end
+            // FETCH_REGISTERS: begin
+            // end
 
             EXECUTE_INSTRUCTION: begin
+                instruction_completed = LOW;
             end
 
             WRITE_BACK: begin
                 // Update pc
                 // Store Word
+                instruction_completed = HIGH;
+            end
+        endcase
+    end
+
+    always_ff @(posedge clk) begin
+        case (processor_state)
+            FETCH_INSTRUCTION: begin
+                processor_state <= EXECUTE_INSTRUCTION;
+            end
+
+            // FETCH_REGISTERS: begin
+            // end
+
+            EXECUTE_INSTRUCTION: begin
+                processor_state <= WRITE_BACK;
+            end
+
+            WRITE_BACK: begin
+                processor_state <= FETCH_INSTRUCTION;
             end
         endcase
     end
@@ -144,6 +168,8 @@ module top (
                 7'b0100011: begin // sb, sh, sw
                     w_dmem_wren <= HIGH; // Write Operation
                     w_funct3_memory <= w_funct3_decoder;
+                    w_dmem_address <= registers[rs1] + w_imm_s_decoder;
+                    w_dmem_data_in <= registers[rs2];
                 end
             endcase
         end
@@ -167,11 +193,13 @@ module top (
 
     // Update Program Counter
     always_ff @(posedge clk) begin
-        if (opcode == 1101111) begin // jal
-        end else if (opcode == 1100111) begin // jalr
-        end else if (opcode == 1100011) begin // beq, bne, blt, bge, bltu, bgeu
-        end else begin // All other instructions
-            increment <= 32'd4;
+        if (processor_state == WRITE_BACK) begin
+            if (opcode == 1101111) begin // jal
+            end else if (opcode == 1100111) begin // jalr
+            end else if (opcode == 1100011) begin // beq, bne, blt, bge, bltu, bgeu
+            end else begin // All other instructions
+                increment <= 32'd4;
+            end
         end
     end
 
@@ -180,5 +208,4 @@ module top (
     assign RGB_R = ~red;
     assign RGB_G = ~green;
     assign RGB_B = ~blue;
-
 endmodule
