@@ -22,6 +22,8 @@ module top (
     localparam HIGH = 1'b1;
     localparam LOW = 1'b0;
 
+    localparam DEFAULT_PCREL_13 = 32'd4;
+
     // Net Declarations
     logic reset;
     logic led;
@@ -51,6 +53,10 @@ module top (
     logic [31:0] w_imm_b_decoder;
     logic [31:0] w_imm_u_decoder;
     logic [31:0] w_imm_j_decoder;
+
+    logic [31:0] rs1_value;
+    logic [31:0] rs2_value;
+    logic [31:0] pcrel_13;
 
     logic [2:0] processor_state = FETCH_INSTRUCTION;
 
@@ -178,6 +184,68 @@ module top (
         end
     end
 
+    /////////////////// Branch Instruction Operations /////////////////////////
+    always_ff @(negedge clk) begin
+        if (processor_state == EXECUTE_INSTRUCTION && opcode == 7'b1100011) begin
+            rs1_value = registers[rs1];
+            rs2_value = registers[rs2];
+
+            case (w_funct3_decoder)
+                default: begin // any other
+                    pcrel_13 = 32'b0;
+                end
+
+                3'b000: begin // beq
+                    if (rs1_value == rs2_value) begin
+                        pcrel_13 = w_imm_b_decoder;
+                    end else begin
+                        pcrel_13 = DEFAULT_PCREL_13;
+                    end
+                end
+
+                3'b001: begin // bne
+                    if (rs1_value != rs2_value) begin
+                        pcrel_13 = w_imm_b_decoder;
+                    end else begin
+                        pcrel_13 = DEFAULT_PCREL_13;
+                    end
+                end
+
+                3'b100: begin // blt
+                    if (rs1_value < rs2_value) begin
+                        pcrel_13 = w_imm_b_decoder;
+                    end else begin
+                        pcrel_13 = DEFAULT_PCREL_13;
+                    end
+                end
+
+                3'b101: begin // bge
+                    if (rs1_value >= rs2_value) begin
+                        pcrel_13 = w_imm_b_decoder;
+                    end else begin
+                        pcrel_13 = DEFAULT_PCREL_13;
+                    end
+                end
+
+                3'b110: begin //bltu
+                    if (rs1_value < rs2_value) begin
+                        pcrel_13 = w_imm_b_decoder;
+                    end else begin
+                        pcrel_13 = DEFAULT_PCREL_13;
+                    end
+                end
+
+                3'b111: begin // bgeu
+                    if (rs1_value >= rs2_value) begin
+                        pcrel_13 = w_imm_b_decoder;
+                    end else begin
+                        pcrel_13 = DEFAULT_PCREL_13;
+                    end
+                end
+            endcase
+        end
+    end
+
     ////////////////////////////// Registers //////////////////////////////////
     // Maintain Zero Register Equal to Zero
     always_ff @(posedge clk) begin
@@ -200,6 +268,7 @@ module top (
             if (opcode == 1101111) begin // jal
             end else if (opcode == 1100111) begin // jalr
             end else if (opcode == 1100011) begin // beq, bne, blt, bge, bltu, bgeu
+                increment <= pcrel_13;
             end else begin // All other instructions
                 increment <= 32'd4;
             end
