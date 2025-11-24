@@ -4,6 +4,7 @@
 
 `include "memory.sv"
 `include "decoder.sv"
+`include "alu.sv"
 
 module top (
     input logic clk, 
@@ -53,6 +54,11 @@ module top (
     logic [31:0] w_imm_b_decoder;
     logic [31:0] w_imm_u_decoder;
     logic [31:0] w_imm_j_decoder;
+    logic [4:0] w_index_decoder;
+
+    logic [31:0] alu_value1;
+    logic [31:0] alu_value2;
+    logic [31:0] alu_output;
 
     logic [31:0] rs1_value;
     logic [31:0] rs2_value;
@@ -102,7 +108,18 @@ module top (
         .imm_s          (w_imm_s_decoder),
         .imm_b          (w_imm_b_decoder),
         .imm_u          (w_imm_u_decoder),
-        .imm_j          (w_imm_j_decoder)
+        .imm_j          (w_imm_j_decoder),
+        .index          (w_index_decoder)
+    );
+
+    alu u3 (
+        .clk            (clk),
+        .funct3         (w_funct3_decoder),
+        .funct7         (w_funct7_decoder),
+        .index          (w_index_decoder),
+        .value1         (alu_value1),
+        .value2         (alu_value2),
+        .out            (alu_output)
     );
 
     /////////////////////////// Processor State Machine ///////////////////////
@@ -179,6 +196,18 @@ module top (
                     w_funct3_memory <= w_funct3_decoder;
                     w_dmem_address <= registers[rs1] + w_imm_s_decoder;
                     w_dmem_data_in <= registers[rs2];
+                end
+
+                7'b0010011: begin // Immediate ALU ops — I-type -  addi, slti, sltiu, xori, ori, andi, slli, srli, srai
+                    alu_value1 = w_imm_i_decoder;
+                    alu_value2 = registers[rs1];
+                    registers[rd] <= alu_output;
+                end
+
+                7'b0110011: begin // Register ALU ops — R-type -  add, sub, sll, slt, sltu, xor, srl, sra, or, and
+                    alu_value1 = registers[rs1];
+                    alu_value2 = registers[rs2];
+                    registers[rd] <= alu_output;                   
                 end
             endcase
         end
