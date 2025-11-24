@@ -71,8 +71,8 @@ module top (
 
     // Module Declarations
     memory #(
-        .IMEM_INIT_FILE_PREFIX  ("mem_test_"),
-        .DMEM_INIT_FILE_PREFIX  ("example/rv32i_test")
+        .IMEM_INIT_FILE_PREFIX  ("tester_memories/branch_instruct_test_"),
+        .DMEM_INIT_FILE_PREFIX  ("tester_memories/tester_dmem_")
     ) u1 (
         .clk            (clk), 
         .funct3         (w_funct3_memory), 
