@@ -63,6 +63,8 @@ module top (
     logic [31:0] rs1_value;
     logic [31:0] rs2_value;
     logic [31:0] pcrel_13;
+    logic [31:0] pcrel_21;
+    logic [31:0] jalr_increment = 32'b0;
 
     logic [2:0] processor_state = FETCH_INSTRUCTION;
 
@@ -275,6 +277,35 @@ module top (
         end
     end
 
+    ////////////////////// Other Instruction Operations ///////////////////////
+    always_ff @(negedge clk) begin
+        if (processor_state == EXECUTE_INSTRUCTION) begin
+            case (opcode)
+                default: begin // All other instructions
+                end
+                
+                7'b0110111: begin // lui
+                    registers[rd] <= w_imm_u_decoder;
+                end
+
+                7'b0010111: begin // auipc
+                    registers[rd] <= pc + w_imm_u_decoder;
+                end
+
+                7'b1101111: begin // jal
+                    registers[rd] <= pc + 32'd4;
+                    pcrel_21 <= w_imm_j_decoder;
+                end
+
+                7'b1100111: begin // jalr
+                    registers[rd] <= pc + 32'd4;
+                    jalr_increment <= (registers[rs1] + w_imm_i_decoder) - pc; // equivalent to setting pc equal to rs1 + imm_i
+                end
+
+            endcase
+        end
+    end
+
     ////////////////////////////// Registers //////////////////////////////////
     // Maintain Zero Register Equal to Zero
     always_ff @(posedge clk) begin
@@ -299,9 +330,11 @@ module top (
             end
 
             7'b1101111: begin // jal
+                increment <= pcrel_21;
             end
 
             7'b1100111: begin // jalr
+                increment <= {jalr_increment[31:1], 1'b0}; // Used to make sure LSB is always 0
             end
 
             7'b1100011: begin // beq, bne, blt, bge, bltu, bgeu
