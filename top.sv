@@ -256,7 +256,7 @@ module top (
                     end
                 end
 
-                3'b110: begin //bltu
+                3'b110: begin // bltu
                     if (rs1_value < rs2_value) begin
                         pcrel_13 = w_imm_b_decoder;
                     end else begin
@@ -293,15 +293,21 @@ module top (
 
     // Update Program Counter
     always_ff @(negedge clk) begin
-        if (processor_state == WRITE_BACK) begin
-            if (opcode == 1101111) begin // jal
-            end else if (opcode == 1100111) begin // jalr
-            end else if (opcode == 1100011) begin // beq, bne, blt, bge, bltu, bgeu
-                increment <= pcrel_13;
-            end else begin // All other instructions
+        case (opcode)
+            default: begin // All other instructions
                 increment <= 32'd4;
             end
-        end
+
+            7'b1101111: begin // jal
+            end
+
+            7'b1100111: begin // jalr
+            end
+
+            7'b1100011: begin // beq, bne, blt, bge, bltu, bgeu
+                increment <= pcrel_13;
+            end
+        endcase
     end
 
     ///////////////////////////////////////////////////////////////////////////
