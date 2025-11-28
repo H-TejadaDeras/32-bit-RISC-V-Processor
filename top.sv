@@ -79,7 +79,7 @@ module top (
 
     // Module Declarations
     memory #(
-        .IMEM_INIT_FILE_PREFIX  ("tester_memories/branch_instruct_test_"),
+        .IMEM_INIT_FILE_PREFIX  ("tester_memories/misc_instruct_test_"),
         .DMEM_INIT_FILE_PREFIX  ("tester_memories/tester_dmem_")
     ) u1 (
         .clk            (clk), 
