@@ -71,9 +71,6 @@ module top (
     // tmp
     parameter EXECUTE_INSTRUCTION_CLK_CYCLES = 2 - 1; // Zero-based indexing
     logic [$clog2(EXECUTE_INSTRUCTION_CLK_CYCLES):0] execute_instruction_counter = 0;
-    logic [31:0] tmp_x9;
-    logic [31:0] tmp;
-    logic [31:0] tmp2;
 
     // Register Declarations
     logic [31:0][31:0] registers = 0;
@@ -308,15 +305,12 @@ module top (
             endcase
         end
     end
-    assign tmp = registers[rs1] + w_imm_i_decoder;
-    assign tmp2 = registers[28];
 
     ////////////////////////////// Registers //////////////////////////////////
     // Maintain Zero Register Equal to Zero
     always_ff @(posedge clk) begin
         registers[0] = 32'b0;
     end
-    assign tmp_x9 = registers[9];
 
     /////////////////////////// Program Counter ///////////////////////////////
     always_ff @(posedge clk) begin
