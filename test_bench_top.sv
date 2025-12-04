@@ -36,10 +36,9 @@ module test_bench_top;
     // Display Processor State + Registers
     always @(posedge clk) begin
         if (u0.processor_state == 2'b00) begin
-            // $write("%")
-            // $$display("");
             for (int k = 0; k < 1; k = k + 1) begin
                 $display("%s %b", "Program Counter:", u0.pc);
+                $display("%s %b", "Current Instruction:", u0.current_instruction);
                 for (int i = 0; i < 32; i = i + 1) begin
                     $write("%s%0d%s %b", "Register x", i, ":", u0.registers[i]);
                     $display("");
