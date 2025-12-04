@@ -11,13 +11,14 @@ module test_bench_top;
     logic RGB_R;
     logic RGB_G;
     logic RGB_B;
+    string separator = "-------------------------------------------------";
 
     top u0 (
-        .clk    (clk), 
-        .LED    (LED),
-        .RGB_R  (RGB_R),
-        .RGB_G  (RGB_G),
-        .RGB_B  (RGB_B)
+        .clk                (clk), 
+        .LED                (LED),
+        .RGB_R              (RGB_R),
+        .RGB_G              (RGB_G),
+        .RGB_B              (RGB_B)
     );
 
     initial begin
@@ -28,7 +29,23 @@ module test_bench_top;
     end
 
     always begin
-        #2
+        #50000 // this is normally 2; changed for the purpose of displaying processor state
         clk = ~clk;
+    end
+
+    // Display Processor State + Registers
+    always @(posedge clk) begin
+        if (u0.processor_state == 2'b00) begin
+            // $write("%")
+            // $$display("");
+            for (int k = 0; k < 1; k = k + 1) begin
+                $display("%s %b", "Program Counter:", u0.pc);
+                for (int i = 0; i < 32; i = i + 1) begin
+                    $write("%s%0d%s %b", "Register x", i, ":", u0.registers[i]);
+                    $display("");
+                end
+            $display("%s", separator);
+            end
+        end
     end
     endmodule

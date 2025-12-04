@@ -15,10 +15,10 @@ module top (
 );
     /////////////////////////////// Declarations //////////////////////////////
     // Variable Declarations
-    localparam FETCH_INSTRUCTION = 3'b000;
-    localparam FETCH_REGISTERS = 3'b001;
-    localparam EXECUTE_INSTRUCTION = 3'b010;
-    localparam WRITE_BACK = 3'b011;
+    localparam FETCH_INSTRUCTION = 2'b00;
+    localparam FETCH_REGISTERS = 2'b01;
+    localparam EXECUTE_INSTRUCTION = 2'b10;
+    localparam WRITE_BACK = 2'b11;
 
     localparam HIGH = 1'b1;
     localparam LOW = 1'b0;
@@ -68,7 +68,6 @@ module top (
 
     logic [2:0] processor_state = FETCH_INSTRUCTION;
 
-    // tmp
     parameter EXECUTE_INSTRUCTION_CLK_CYCLES = 2 - 1; // Zero-based indexing
     logic [$clog2(EXECUTE_INSTRUCTION_CLK_CYCLES):0] execute_instruction_counter = 0;
 
