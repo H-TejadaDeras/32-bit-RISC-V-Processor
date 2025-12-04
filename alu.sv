@@ -22,40 +22,44 @@
         out <= 32'd0;
         if (index == 5'd9 || index == 5'd8) begin    // Register ALU ops
             case(funct3)
-                3'b000: begin  // add or addi
-                    out <= value1 + value2;
+                3'b000: begin  // add or addi or sub or subi
+                    if (funct7[5] == 1'b1) begin
+                        out <= value1 - value2;
+                    end else begin
+                        out <= value1 + value2;
+                    end
                 end
                 3'b010: begin // slti or slt
-                    out <= 31'd0;
-                    if (value2 > value1) begin
-                        out <= 31'd1;
+                    out <= 32'd0;
+                    if (value2 < value1) begin
+                        out <= 32'd1;
                     end
                 end
                 3'b011: begin // sltiu or sltu
-                    out <= 31'd0;
-                    if (value2 < value1) begin
-                        out <= 31'd1;
+                    out <= 32'd0;
+                    if (value2 > value1) begin
+                        out <= 32'd1;
                     end
                 end
                 3'b100: begin // xori or xor
                     out <= value1 ^ value2;
                 end
                 3'b110: begin // ori or or
-                    out <= value1 || value2;
+                    out <= value1 | value2;
                 end
                 3'b111: begin // andi or and
-                    out <= value1 && value2;
+                    out <= value1 & value2;
                 end
                 3'b001: begin // slli or sll
-                    shamt = value1[24:20];
-                    out <= value2 << shamt;
+                    shamt = value2[4:0];
+                    out <= value1 << shamt;
                 end
 
                 3'b101: begin // srli/srl/sra/srai
-                    shamt = value1[24:20];
-                    if (funct7[5] == 1'b1)   // SRA / SRAI
+                    shamt = value1[4:0];
+                    if (value1[10] == 1'b1)   // SRA / SRAI
                         out <= $signed(value2) >>> shamt;
-                    else
+                    else  // srli/srl
                         out <= value2 >> shamt;
                 end
             endcase            
