@@ -23,10 +23,21 @@
         if (index == 5'd9 || index == 5'd8 || index == 5'd10) begin    // Register ALU ops
             if (funct7 == 0000001) begin
                 case(funct3)
-                    3'b000: begin  
+                    3'b100: begin  
+                        out <= $signed(value1) / $signed(value2);
+                    end
+                    3'b101: begin
+                        out <= value1 / value2;
+                    end
+                    3'b110 begin
+                        out <= $signed(value1) % $signed(value2);
+                    end
+                    3'b111 begin
+                        out <= value1 % value2;
                     end
                 endcase
             end
+            
             else begin
                 case(funct3)
                     3'b000: begin  // add or addi or sub or subi
