@@ -18,22 +18,40 @@
     output logic [31:0] out
 );
     logic [0:4] shamt = 5'd0;
+    logic [63:0] product = 64'b0;
+
     always_ff @(posedge clk) begin
         out <= 32'd0;
         if (index == 5'd9 || index == 5'd8 || index == 5'd10) begin    // Register ALU ops
-            if (funct7 == 0000001) begin
+            if (funct7 == 0000001) begin // Division and Multiplication Operations
                 case(funct3)
-                    3'b100: begin  
+                    3'b100: begin // div
                         out <= $signed(value1) / $signed(value2);
                     end
-                    3'b101: begin
+                    3'b101: begin // divu
                         out <= value1 / value2;
                     end
-                    3'b110 begin
+                    3'b110: begin // rem
                         out <= $signed(value1) % $signed(value2);
                     end
-                    3'b111 begin
+                    3'b111: begin // remu
                         out <= value1 % value2;
+                    end
+                    3'b000: begin // mul
+                        product <= $signed(value1) * $signed(value2);
+                        out <= product[31:0];
+                    end
+                    3'b001: begin // mulh
+                        product <= $signed(value1) * $signed(value2);
+                        out <= product[63:32];
+                    end
+                    3'b010: begin // mulhsu
+                        product <= $signed(value1) * value2;
+                        out <= product[64:32];
+                    end
+                    3'b011: begin // mulhu
+                        product <= value1 * value2;
+                        out <= product[64:32];
                     end
                 endcase
             end
