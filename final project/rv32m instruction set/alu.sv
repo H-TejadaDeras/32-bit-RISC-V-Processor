@@ -23,7 +23,7 @@
     always_ff @(posedge clk) begin
         out <= 32'd0;
         if (index == 5'd9 || index == 5'd8 || index == 5'd10) begin    // Register ALU ops
-            if (funct7 == 0000001) begin // Division and Multiplication Operations
+            if (funct7 == 7'b0000001) begin // Division and Multiplication Operations
                 case(funct3)
                     3'b100: begin // div
                         out <= $signed(value1) / $signed(value2);

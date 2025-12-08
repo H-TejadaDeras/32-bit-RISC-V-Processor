@@ -68,8 +68,8 @@ module top (
 
     logic [2:0] processor_state = FETCH_INSTRUCTION;
 
-    parameter EXECUTE_INSTRUCTION_CLK_CYCLES = 2 - 1; // Zero-based indexing
-    logic [$clog2(EXECUTE_INSTRUCTION_CLK_CYCLES):0] execute_instruction_counter = 0;
+    parameter execute_instruction_clk_cycles = 2 - 1; // Zero-based indexing
+    logic [3:0] execute_instruction_counter = 0;
 
     // Register Declarations
     logic [31:0][31:0] registers = 0;
@@ -161,7 +161,7 @@ module top (
             end
 
             EXECUTE_INSTRUCTION: begin
-                if (execute_instruction_counter >= EXECUTE_INSTRUCTION_CLK_CYCLES) begin
+                if (execute_instruction_counter >= execute_instruction_clk_cycles) begin
                     processor_state <= WRITE_BACK;
                     execute_instruction_counter = 0;
                 end else begin
@@ -174,6 +174,26 @@ module top (
             end
         endcase
     end
+
+    // Determine Execute Instructions Clock Cycles Amount
+    always_comb begin
+        if (processor_state == FETCH_REGISTERS) begin
+            case (opcode)
+                default: begin
+                    execute_instruction_clk_cycles <= 2 - 1; // Zero Based Indexing
+                end
+
+                7'b0110011: begin // Register ALU Operations
+                    if (funct7 == 7'b0000001) begin
+                        execute_instruction_clk_cycles <= 4 - 1; // Zero Based Indexing
+                    end else begin
+                        execute_instruction_clk_cycles <= 2 - 1; // Zero Based Indexing
+                    end
+                end
+            endcase
+        end
+    end
+                    
 
     /////////////////////// Data Memory Operations ////////////////////////////
     always_ff @(negedge clk) begin
