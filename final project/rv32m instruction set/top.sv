@@ -68,7 +68,7 @@ module top (
 
     logic [2:0] processor_state = FETCH_INSTRUCTION;
 
-    parameter execute_instruction_clk_cycles = 2 - 1; // Zero-based indexing
+    logic execute_instruction_clk_cycles = 2 - 1; // Zero-based indexing
     logic [3:0] execute_instruction_counter = 0;
 
     // Register Declarations
@@ -78,8 +78,8 @@ module top (
 
     // Module Declarations
     memory #(
-        .IMEM_INIT_FILE_PREFIX  ("tester_memories/misc_instruct_test_"),
-        .DMEM_INIT_FILE_PREFIX  ("tester_memories/tester_dmem_")
+        .IMEM_INIT_FILE_PREFIX  ("tester_memories/mult_instruct_test_"),
+        .DMEM_INIT_FILE_PREFIX  ("tester_memories/tester_mult_dmem_")
     ) u1 (
         .clk            (clk), 
         .funct3         (w_funct3_memory), 
@@ -184,7 +184,7 @@ module top (
                 end
 
                 7'b0110011: begin // Register ALU Operations
-                    if (funct7 == 7'b0000001) begin
+                    if (w_funct7_decoder == 7'b0000001) begin
                         execute_instruction_clk_cycles <= 4 - 1; // Zero Based Indexing
                     end else begin
                         execute_instruction_clk_cycles <= 2 - 1; // Zero Based Indexing
@@ -192,8 +192,7 @@ module top (
                 end
             endcase
         end
-    end
-                    
+    end  
 
     /////////////////////// Data Memory Operations ////////////////////////////
     always_ff @(negedge clk) begin
