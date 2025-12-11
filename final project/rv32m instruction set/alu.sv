@@ -1,10 +1,12 @@
 /*
- *  Arithmetic Logic Unit
+ *  Arithmetic Logic Unit (with RV32M Instructions)
+ *  Anika Mahesh + Henry Tejada Deras - 12-11-2025
  *  
  *  Computes Addition and Subtraction Operations
  *  Supported Operations:
  *  Immediate ALU ops — I-type -  addi, slti, sltiu, xori, ori, andi, slli, srli, srai
  *  Register ALU ops — R-type -  add, sub, sll, slt, sltu, xor, srl, sra, or, and
+ *  RV32M Instructions
  */
 
  module alu (
@@ -46,7 +48,7 @@
                         out <= product[63:32];
                     end
                     3'b010: begin // mulhsu
-                        product <= $signed(value1) * value2;
+                        product <= $signed(value1) * $signed({1'b0, value2}); // $signed({1'b0, value2}) makes sure value is unsigned when it is multiplied
                         out <= product[64:32];
                     end
                     3'b011: begin // mulhu

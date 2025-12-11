@@ -1,5 +1,6 @@
 /*
- *  RISC-V Processor with RV32I Instructions
+ *  RISC-V Processor with RV32I and RV32M Instructions
+ *  Henry Tejada Deras + Anika Mahesh - 12-11-2025
  */
 
 `include "memory.sv"
@@ -180,14 +181,14 @@ module top (
         if (processor_state == FETCH_REGISTERS) begin
             case (opcode)
                 default: begin
-                    execute_instruction_clk_cycles <= 2 - 1; // Zero Based Indexing
+                    execute_instruction_clk_cycles = 2 - 1; // Zero Based Indexing
                 end
 
                 7'b0110011: begin // Register ALU Operations
                     if (w_funct7_decoder == 7'b0000001) begin
-                        execute_instruction_clk_cycles <= 4 - 1; // Zero Based Indexing
+                        execute_instruction_clk_cycles = 4 - 1; // Zero Based Indexing
                     end else begin
-                        execute_instruction_clk_cycles <= 2 - 1; // Zero Based Indexing
+                        execute_instruction_clk_cycles = 2 - 1; // Zero Based Indexing
                     end
                 end
             endcase
