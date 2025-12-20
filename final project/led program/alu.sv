@@ -1,5 +1,6 @@
 /*
  *  Arithmetic Logic Unit
+ *  Anika Mahesh
  *  
  *  Computes Addition and Subtraction Operations
  *  Supported Operations:

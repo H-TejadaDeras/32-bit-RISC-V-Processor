@@ -1,5 +1,6 @@
 /*
  *  RISC-V Processor with RV32I Instructions
+ *  Anika Mahesh + Henry Tejada Deras
  */
 
 `include "memory.sv"
